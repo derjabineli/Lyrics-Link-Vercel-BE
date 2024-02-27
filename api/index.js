@@ -61,7 +61,6 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      domain: "lyrics-link-backend-ef2fcf25f213.herokuapp.com",
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: false,
       path: "/api",
