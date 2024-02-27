@@ -1,6 +1,5 @@
 const express = require("express");
 const expressSession = require("express-session");
-const postgresSession = require("connect-pg-simple");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const pool = require("../db/db.js");
@@ -12,6 +11,7 @@ const {
 } = require("../utils/planningcenter.js");
 dotenv.config();
 const FRONTENDURL = process.env.FRONTENDURL;
+const PORT = process.env.PORT;
 const app = express();
 // Takes information from a request body and attaches it to request object
 const corsOptions = {
@@ -19,10 +19,37 @@ const corsOptions = {
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 };
+// Set trust proxy
+app.set("trust proxy", true);
+
 app.use(cors(corsOptions));
+// Middleware to set CORS headers for all routes
+app.use((req, res, next) => {
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://lyrics-link.vercel.app"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://lyrics-link-git-main-eli-s-team-f5d5aee5.vercel.app"
+  );
+  // ... other headers
+
+  // Allow specific HTTP methods
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+
+  // Allow specific headers to be sent in the request
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Allow credentials (e.g., cookies, authentication) to be included in requests
+  res.setHeader("Access-Control-Allow-Credentials", true);
+
+  // Continue to the next middleware or route handler
+  next();
+});
 app.use(express.json());
 // Set Postgres Session
-const pgSession = postgresSession(expressSession);
+const pgSession = require("connect-pg-simple")(expressSession);
 app.use(
   expressSession({
     store: new pgSession({
@@ -33,7 +60,14 @@ app.use(
     secret: process.env.FOO_COOKIE_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24, httpOnly: false, path: "/api" }, // 1 day
+    cookie: {
+      domain: "lyrics-link-backend-ef2fcf25f213.herokuapp.com",
+      maxAge: 1000 * 60 * 60 * 24,
+      httpOnly: false,
+      path: "/api",
+      sameSite: "None",
+      secure: true,
+    }, // 1 day
   })
 );
 app.get("/api", async (req, res) => {
@@ -167,7 +201,7 @@ app.get("/api/getSong", async (req, res) => {
     console.warn(error);
   }
 });
-app.listen(3005, () => {
-  console.log("server listening on port 3005");
+app.listen(PORT, () => {
+  console.log("server listening on port" + PORT);
 });
 module.exports = app;
