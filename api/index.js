@@ -29,10 +29,10 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Origin",
     "https://lyrics-link.vercel.app/"
   );
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://lyrics-link-git-main-eli-s-team-f5d5aee5.vercel.app"
-  );
+  // res.setHeader(
+  //   "Access-Control-Allow-Origin",
+  //   "https://lyrics-link-git-main-eli-s-team-f5d5aee5.vercel.app"
+  // );
   // ... other headers
 
   // Allow specific HTTP methods
