@@ -163,7 +163,7 @@ app.post("/api/events", async (req, res) => {
       text: "INSERT INTO events (id, event_type, event_date, songs, user_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event_type = $2, event_date = $3, songs = $4",
       values: [event_id, name, date, songs, user_id],
     });
-    res.redirect(FRONTENDURL);
+    res.send(events);
   } catch (error) {
     console.warn(error);
   }
