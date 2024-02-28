@@ -178,18 +178,20 @@ app.get("/api/song", async (req, res) => {
   const data = await getSong(req.session.access_token, id);
   res.send(await data);
 });
-app.post("/api/song", async (req, res) => {
-  const { id, name, lyrics, chord_chart, chord_chart_key } = req.body;
-  try {
-    const events = await pool.query({
-      text: "INSERT INTO event_songs (id, name, lyrics, chord_chart, chord_chart_key) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, lyrics = $3, chord_chart = $4, chord_chart_key = $5",
-      values: [id, name, lyrics, chord_chart, chord_chart_key],
-    });
-    res.send(events);
-  } catch (error) {
-    console.warn(error);
-  }
-});
+// app.post("/api/song", async (req, res) => {
+//   console.log(req.body);
+
+//   const { id, name, lyrics, chord_chart, chord_chart_key } = req.body;
+//   try {
+//     const events = await pool.query({
+//       text: "INSERT INTO event_songs (id, name, lyrics, chord_chart, chord_chart_key) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, lyrics = $3, chord_chart = $4, chord_chart_key = $5",
+//       values: [id, name, lyrics, chord_chart, chord_chart_key],
+//     });
+//     res.send(events);
+//   } catch (error) {
+//     console.warn(error);
+//   }
+// });
 app.get("/api/getSong", async (req, res) => {
   const id = req.query.id;
   try {
