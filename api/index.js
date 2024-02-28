@@ -148,6 +148,8 @@ app.get("/api/events", async (req, res) => {
   }
 });
 app.post("/api/events", async (req, res) => {
+  console.log(req.body);
+
   let event_id;
   if (req.body.id === undefined) {
     event_id = Math.random().toString(20).substring(2, 10);
