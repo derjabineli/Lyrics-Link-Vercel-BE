@@ -16,6 +16,36 @@ const app = express();
 
 app.use(express.json());
 
+app.use(
+  cors({
+    origin: process.env.CLIENT,
+  })
+);
+
+app.use((req, res, next) => {
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://lyrics-link.vercel.app"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://lyrics-link-git-main-eli-s-team-f5d5aee5.vercel.app"
+  );
+  // ... other headers
+
+  // Allow specific HTTP methods
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+
+  // Allow specific headers to be sent in the request
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Allow credentials (e.g., cookies, authentication) to be included in requests
+  res.setHeader("Access-Control-Allow-Credentials", true);
+
+  // Continue to the next middleware or route handler
+  next();
+});
+
 app.get("/api/getSong", async (req, res) => {
   const id = req.query.id;
   try {
@@ -46,12 +76,6 @@ const jwtCheck = auth({
 });
 
 app.use(jwtCheck);
-
-app.use(
-  cors({
-    origin: process.env.CLIENT,
-  })
-);
 
 const getAccessToken = (req, res, next) => {
   const userId = req.auth.payload.sub;
