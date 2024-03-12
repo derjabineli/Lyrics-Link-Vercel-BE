@@ -1,7 +1,8 @@
 const express = require("express");
-const expressSession = require("express-session");
 const dotenv = require("dotenv");
+const { auth } = require("express-oauth2-jwt-bearer");
 const cors = require("cors");
+const axios = require("axios");
 const pool = require("../db/db.js");
 const {
   getPCCredentials,
@@ -10,188 +11,17 @@ const {
   getUser,
 } = require("../utils/planningcenter.js");
 dotenv.config();
-const FRONTENDURL = process.env.FRONTENDURL;
 const PORT = process.env.PORT;
 const app = express();
-// Takes information from a request body and attaches it to request object
-const corsOptions = {
-  origin: process.env.FRONTENDURL,
-  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
-};
-// Set trust proxy
-app.set("trust proxy", true);
 
-app.use(cors(corsOptions));
-// Middleware to set CORS headers for all routes
-app.use((req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://lyrics-link.vercel.app"
-  );
-  // res.setHeader(
-  //   "Access-Control-Allow-Origin",
-  //   "https://lyrics-link-git-main-eli-s-team-f5d5aee5.vercel.app"
-  // );
-  // ... other headers
-
-  // Allow specific HTTP methods
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-
-  // Allow specific headers to be sent in the request
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  // Allow credentials (e.g., cookies, authentication) to be included in requests
-  res.setHeader("Access-Control-Allow-Credentials", true);
-
-  // Continue to the next middleware or route handler
-  next();
-});
 app.use(express.json());
-// Set Postgres Session
-const pgSession = require("connect-pg-simple")(expressSession);
+
 app.use(
-  expressSession({
-    store: new pgSession({
-      pool: pool, // Connection pool
-      tableName: "user_sessions", // Use another table-name than the default "session" one
-      // Insert connect-pg-simple options here
-    }),
-    secret: process.env.FOO_COOKIE_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24,
-      httpOnly: false,
-      path: "/api",
-      sameSite: "None",
-      secure: true,
-    }, // 1 day
+  cors({
+    origin: process.env.CLIENT,
   })
 );
-app.get("/api", async (req, res) => {
-  console.log(req.session);
-  if (req.session.access_token) {
-    res.send("logged in");
-  } else res.send("not logged in");
-});
-// Log in
-app.get("/api/login", async (req, res) => {
-  res.redirect(
-    `https://api.planningcenteronline.com/oauth/authorize?client_id=${process.env.PCCLIENTID}&redirect_uri=${process.env.REDIRECTURI}&response_type=code&scope=services people`
-  );
-});
-app.get("/api/logout", (req, res) => {
-  req.session.destroy();
-  res.redirect(FRONTENDURL);
-});
-app.get("/api/callback", async (req, res) => {
-  try {
-    const code = req.query.code;
-    if (!code) {
-      res.redirect("/api/login");
-    }
-    console.log("Code: ");
-    console.log(code);
-    const accessData = await getPCCredentials(code);
-    req.session.access_token = accessData.access_token;
-    req.session.token_type = accessData.token_type;
-    req.session.expires_in = accessData.expires_in;
-    req.session.refresh_token = accessData.refresh_token;
-    req.session.scope = accessData.scope;
-    req.session.created_at = accessData.created_at;
-    const user = await getUser(accessData.access_token);
-    req.session.user_id = user.data.id;
-    const queryStatus = await pool.query({
-      text: "INSERT INTO users (id, name, photo_url) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = $2, photo_url = $3",
-      values: [
-        user.data.id,
-        user.data.attributes.full_name,
-        user.data.attributes.photo_url,
-      ],
-    });
 
-    req.session.save(() => {
-      res.redirect(FRONTENDURL);
-    });
-  } catch (error) {
-    console.warn(error);
-  }
-});
-app.get("/api/user", async (req, res) => {
-  try {
-    console.log(req.session);
-    const user = await getUser(req.session.access_token);
-    res.send(user);
-  } catch (err) {
-    res.send(err);
-  }
-});
-app.get("/api/event", async (req, res) => {
-  const { id } = req.query;
-  const event = await pool.query({
-    text: "SELECT * FROM events WHERE id = $1",
-    values: [id],
-  });
-  res.send(event);
-});
-app.get("/api/events", async (req, res) => {
-  console.log(req.session.user_id);
-  try {
-    const events = await pool.query({
-      text: "SELECT * FROM events WHERE user_id = $1",
-      values: [req.session.user_id],
-    });
-    res.send(events.rows);
-  } catch (error) {
-    console.warn(error);
-  }
-});
-app.post("/api/events", async (req, res) => {
-  console.log(req.body);
-
-  let event_id;
-  if (req.body.id === undefined) {
-    event_id = Math.random().toString(20).substring(2, 10);
-  } else {
-    event_id = req.body.id;
-  }
-  const { name, date, songs } = req.body;
-  const user_id = req.session.user_id;
-  try {
-    const events = await pool.query({
-      text: "INSERT INTO events (id, event_type, event_date, songs, user_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event_type = $2, event_date = $3, songs = $4",
-      values: [event_id, name, date, songs, user_id],
-    });
-    res.send(events);
-  } catch (error) {
-    console.warn(error);
-  }
-});
-app.get("/api/songs", async (req, res) => {
-  const search = req.query.search;
-  const data = await getSongs(req.session.access_token, search);
-  res.send(data);
-});
-app.get("/api/song", async (req, res) => {
-  const id = req.query.id;
-  const data = await getSong(req.session.access_token, id);
-  res.send(await data);
-});
-app.post("/api/song", async (req, res) => {
-  console.log(req.body);
-
-  const { id, name, lyrics, chord_chart, chord_chart_key } = req.body;
-  try {
-    const events = await pool.query({
-      text: "INSERT INTO event_songs (id, name, lyrics, chord_chart, chord_chart_key) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, lyrics = $3, chord_chart = $4, chord_chart_key = $5",
-      values: [id, name, lyrics, chord_chart, chord_chart_key],
-    });
-    res.send(events);
-  } catch (error) {
-    console.warn(error);
-  }
-});
 app.get("/api/getSong", async (req, res) => {
   const id = req.query.id;
   try {
@@ -204,6 +34,120 @@ app.get("/api/getSong", async (req, res) => {
     console.warn(error);
   }
 });
+
+app.get("/api/event", async (req, res) => {
+  const { id } = req.query;
+  const event = await pool.query({
+    text: "SELECT * FROM events WHERE id = $1",
+    values: [id],
+  });
+  res.send(event);
+});
+
+// Configures API to accept RS256 signed tokens
+const jwtCheck = auth({
+  audience: process.env.AUDIENCE,
+  issuerBaseURL: process.env.ISSUERBASEURL,
+  tokenSigningAlg: "RS256",
+});
+
+app.use(jwtCheck);
+
+const getAccessToken = (req, res, next) => {
+  const userId = req.auth.payload.sub;
+
+  let config = {
+    method: "get",
+    maxBodyLength: Infinity,
+    url: `https://dev-pf0jivnn8aes74k4.us.auth0.com/api/v2/users/${userId}`,
+    headers: {
+      Accept: "application/json",
+      Authorization: process.env.AUTHORIZATION,
+    },
+  };
+
+  axios
+    .request(config)
+    .then((response) => {
+      req.accessToken = response.data.identities[0].access_token;
+      const oautID = response.data.user_id;
+      const parts = oautID.split("|");
+      req.user_id = parts[2];
+      next();
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+};
+
+// ROUTES
+app.get("/api/user", getAccessToken, async (req, res) => {
+  try {
+    const user = await getUser(req.accessToken);
+    res.send(JSON.stringify(user));
+  } catch (err) {
+    res.send(err);
+  }
+});
+
+app.get("/api/events", getAccessToken, async (req, res) => {
+  try {
+    const events = await pool.query({
+      text: "SELECT * FROM events WHERE user_id = $1",
+      values: [req.user_id],
+    });
+    res.send(events.rows);
+  } catch (error) {
+    console.warn(error);
+  }
+});
+app.post("/api/events", getAccessToken, async (req, res) => {
+  console.log("Req body: " + req.body);
+
+  let event_id;
+  if (req.body.id === undefined) {
+    event_id = Math.random().toString(20).substring(2, 10);
+  } else {
+    event_id = req.body.id;
+  }
+  const { name, date, songs } = req.body;
+  const user_id = req.user_id;
+  try {
+    const events = await pool.query({
+      text: "INSERT INTO events (id, event_type, event_date, songs, user_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event_type = $2, event_date = $3, songs = $4",
+      values: [event_id, name, date, songs, user_id],
+    });
+    res.send(events);
+  } catch (error) {
+    console.warn(error);
+  }
+});
+
+app.get("/api/songs", getAccessToken, async (req, res) => {
+  const search = req.query.search;
+  const data = await getSongs(req.accessToken, search);
+  res.send(data);
+});
+
+app.get("/api/song", getAccessToken, async (req, res) => {
+  const id = req.query.id;
+  const data = await getSong(req.accessToken, id);
+  res.send(await data);
+});
+
+app.post("/api/song", async (req, res) => {
+  const { id, name, lyrics, chord_chart, chord_chart_key } = req.body;
+  try {
+    const events = await pool.query({
+      text: "INSERT INTO event_songs (id, name, lyrics, chord_chart, chord_chart_key) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, lyrics = $3, chord_chart = $4, chord_chart_key = $5",
+      values: [id, name, lyrics, chord_chart, chord_chart_key],
+    });
+    res.send(events);
+  } catch (error) {
+    console.warn(error);
+  }
+});
+
 app.listen(PORT, () => {
   console.log("server listening on port" + PORT);
 });
