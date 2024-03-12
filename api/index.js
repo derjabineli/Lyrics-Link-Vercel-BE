@@ -16,12 +16,6 @@ const app = express();
 
 app.use(express.json());
 
-app.use(
-  cors({
-    origin: process.env.CLIENT,
-  })
-);
-
 app.get("/api/getSong", async (req, res) => {
   const id = req.query.id;
   try {
@@ -52,6 +46,12 @@ const jwtCheck = auth({
 });
 
 app.use(jwtCheck);
+
+app.use(
+  cors({
+    origin: process.env.CLIENT,
+  })
+);
 
 const getAccessToken = (req, res, next) => {
   const userId = req.auth.payload.sub;
