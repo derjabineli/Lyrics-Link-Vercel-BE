@@ -109,7 +109,7 @@ app.get("/api/user", getAccessToken, async (req, res) => {
   }
 });
 
-app.get("/api/events", async (req, res) => {
+app.get("/api/events", getAccessToken, async (req, res) => {
   try {
     const events = await pool.query({
       text: "SELECT * FROM events WHERE user_id = $1",
@@ -120,7 +120,7 @@ app.get("/api/events", async (req, res) => {
     console.warn(error);
   }
 });
-app.post("/api/events", async (req, res) => {
+app.post("/api/events", getAccessToken, async (req, res) => {
   console.log("Req body: " + req.body);
 
   let event_id;
