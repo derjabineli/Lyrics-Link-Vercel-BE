@@ -108,7 +108,7 @@ const getAccessToken = async (req, res, next) => {
     url: `https://dev-pf0jivnn8aes74k4.us.auth0.com/api/v2/users/${userId}`,
     headers: {
       Accept: "application/json",
-      Authorization: process.env.AUTHORIZATION,
+      Authorization: `Bearer ${token}`},
     },
   };
 
