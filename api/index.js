@@ -99,8 +99,10 @@ const getManagementToken = () => {
 };
 
 const getAccessToken = async (req, res, next) => {
-  const userId = req.auth.payload.sub;
   const token = await getManagementToken();
+
+  // console.log(req.auth);
+  const userId = req.auth.payload.sub;
 
   let config = {
     method: "get",
@@ -108,7 +110,7 @@ const getAccessToken = async (req, res, next) => {
     url: `https://dev-pf0jivnn8aes74k4.us.auth0.com/api/v2/users/${userId}`,
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${token}`},
+      Authorization: token,
     },
   };
 
