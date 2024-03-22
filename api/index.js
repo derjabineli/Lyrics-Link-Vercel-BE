@@ -72,8 +72,35 @@ const jwtCheck = auth({
 
 app.use(jwtCheck);
 
-const getAccessToken = (req, res, next) => {
+const getManagementToken = () => {
+  let config = {
+    method: "post",
+    maxBodyLength: Infinity,
+    url: "https://dev-pf0jivnn8aes74k4.us.auth0.com/oauth/token",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    data: {
+      grant_type: "client_credentials",
+      client_id: process.env.MANAGEMENTID,
+      client_secret: process.env.MANAGEMENTSECRET,
+      audience: process.env.MANAGEMENTAUDIENCE,
+    },
+  };
+
+  return axios
+    .request(config)
+    .then((response) => {
+      return response.data.access_token;
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+};
+
+const getAccessToken = async (req, res, next) => {
   const userId = req.auth.payload.sub;
+  const token = await getManagementToken();
 
   let config = {
     method: "get",
