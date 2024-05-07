@@ -42,13 +42,14 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/getSong", async (req, res) => {
-  const id = req.query.id;
+  const { songId, arrangementId } = req.query;
   try {
-    const lyrics = await pool.query({
-      text: "SELECT lyrics, name FROM event_songs WHERE id = $1;",
-      values: [id],
+    const song = await pool.query({
+      text: "SELECT * FROM song_arrangement WHERE id = $1 AND song_id = $2;",
+      values: [arrangementId, songId],
     });
-    res.send(lyrics.rows[0]);
+    console.log(song);
+    res.send(song.rows[0]);
   } catch (error) {
     console.warn(error);
   }
@@ -57,7 +58,7 @@ app.get("/api/getSong", async (req, res) => {
 app.get("/api/event", async (req, res) => {
   const { id } = req.query;
   const event = await pool.query({
-    text: "SELECT * FROM events WHERE id = $1",
+    text: "SELECT * FROM events_new WHERE id = $1",
     values: [id],
   });
   res.send(event);
@@ -141,7 +142,7 @@ app.get("/api/user", getAccessToken, async (req, res) => {
 app.get("/api/events", getAccessToken, async (req, res) => {
   try {
     const events = await pool.query({
-      text: "SELECT * FROM events WHERE user_id = $1",
+      text: "SELECT * FROM events_new WHERE user_id = $1",
       values: [req.user_id],
     });
     res.send(events.rows);
@@ -149,9 +150,8 @@ app.get("/api/events", getAccessToken, async (req, res) => {
     console.warn(error);
   }
 });
-app.post("/api/events", getAccessToken, async (req, res) => {
-  console.log("Req body: " + req.body);
 
+app.post("/api/events", getAccessToken, async (req, res) => {
   let event_id;
   if (req.body.id === undefined) {
     event_id = Math.random().toString(20).substring(2, 10);
@@ -162,7 +162,7 @@ app.post("/api/events", getAccessToken, async (req, res) => {
   const user_id = req.user_id;
   try {
     const events = await pool.query({
-      text: "INSERT INTO events (id, event_type, event_date, songs, user_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event_type = $2, event_date = $3, songs = $4",
+      text: "INSERT INTO events_new (id, event_type, event_date, songs, user_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event_type = $2, event_date = $3, songs = $4",
       values: [event_id, name, date, songs, user_id],
     });
     res.send(events);
@@ -183,14 +183,36 @@ app.get("/api/song", getAccessToken, async (req, res) => {
   res.send(await data);
 });
 
-app.post("/api/song", async (req, res) => {
-  const { id, name, lyrics, chord_chart, chord_chart_key } = req.body;
+app.post("/api/arrangement", async (req, res) => {
+  const {
+    id,
+    song_name,
+    chord_chart,
+    chord_chart_key,
+    has_chords,
+    lyrics,
+    song_id,
+    arrangement_name,
+  } = req.body;
+
+  const user_id = req.user_id;
+
   try {
-    const events = await pool.query({
-      text: "INSERT INTO event_songs (id, name, lyrics, chord_chart, chord_chart_key) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = $2, lyrics = $3, chord_chart = $4, chord_chart_key = $5",
-      values: [id, name, lyrics, chord_chart, chord_chart_key],
+    const arrangement = await pool.query({
+      text: "INSERT INTO song_arrangement (id, song_name, chord_chart, chord_chart_key, has_chords, lyrics, song_id, arrangement_name, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO UPDATE SET song_name = $2, lyrics = $3",
+      values: [
+        id,
+        song_name,
+        chord_chart,
+        chord_chart_key,
+        has_chords,
+        lyrics,
+        song_id,
+        arrangement_name,
+        user_id,
+      ],
     });
-    res.send(events);
+    res.send(arrangement);
   } catch (error) {
     console.warn(error);
   }
