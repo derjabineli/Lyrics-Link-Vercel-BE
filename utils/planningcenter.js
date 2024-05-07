@@ -57,8 +57,9 @@ async function getSong(accessToken, id) {
   const songData = await songDataFetch.json();
 
   const songObj = {
+    songId: id,
     title: song.data.attributes.title,
-    data: songData.data[0],
+    data: songData.data,
   };
 
   return songObj;
