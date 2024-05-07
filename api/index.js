@@ -180,7 +180,7 @@ app.get("/api/songs", getAccessToken, async (req, res) => {
 app.get("/api/song", getAccessToken, async (req, res) => {
   const id = req.query.id;
   const data = await getSong(req.accessToken, id);
-  res.send(await data);
+  res.send(data);
 });
 
 app.post("/api/arrangement", async (req, res) => {
