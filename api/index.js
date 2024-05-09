@@ -183,7 +183,7 @@ app.get("/api/song", getAccessToken, async (req, res) => {
   res.send(data);
 });
 
-app.post("/api/arrangement", async (req, res) => {
+app.post("/api/arrangement", getAccessToken, async (req, res) => {
   const {
     id,
     song_name,
